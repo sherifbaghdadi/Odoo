@@ -120,7 +120,8 @@ class HolidaysRequest(models.Model):
     employee_id = fields.Many2one(
         'hr.employee', string='Employee', index=True, readonly=True,
         states={'draft': [('readonly', False)], 'confirm': [('readonly', False)]}, default=_default_employee, track_visibility='onchange')
-    manager_id = fields.Many2one('hr.employee', string='Manager', readonly=True)
+    #manager_id = fields.Many2one('hr.employee', string='Manager', readonly=True)
+    x_studio_employee_replacement = fields.Many2one('hr.employee', string='Manager', readonly=True)
     department_id = fields.Many2one(
         'hr.department', string='Department', readonly=True,
         states={'draft': [('readonly', False)], 'confirm': [('readonly', False)]})
@@ -146,8 +147,10 @@ class HolidaysRequest(models.Model):
         help='Number of hours of the leave request according to your working schedule. Used for interface.')
     # details
     meeting_id = fields.Many2one('calendar.event', string='Meeting')
-    parent_id = fields.Many2one('hr.leave', string='Parent', copy=False)
-    linked_request_ids = fields.One2many('hr.leave', 'parent_id', string='Linked Requests')
+    #parent_id = fields.Many2one('hr.leave', string='Parent', copy=False)
+    #linked_request_ids = fields.One2many('hr.leave', 'parent_id', string='Linked Requests')
+    x_studio_employee_replacement = fields.Many2one('hr.leave', string='Parent', copy=False)
+    linked_request_ids = fields.One2many('hr.leave', 'x_studio_employee_replacement', string='Linked Requests')
     holiday_type = fields.Selection([
         ('employee', 'By Employee'),
         ('company', 'By Company'),
@@ -164,7 +167,8 @@ class HolidaysRequest(models.Model):
         states={'draft': [('readonly', False)], 'confirm': [('readonly', False)]})
     first_approver_id = fields.Many2one(
         'hr.employee', string='First Approval', readonly=True, copy=False,
-        help='This area is automatically filled by the user who validate the leave', oldname='manager_id')
+        help='This area is automatically filled by the user who validate the leave', oldname='x_studio_employee_replacement')
+        #help='This area is automatically filled by the user who validate the leave', oldname='manager_id')
     second_approver_id = fields.Many2one(
         'hr.employee', string='Second Approval', readonly=True, copy=False, oldname='manager_id2',
         help='This area is automaticly filled by the user who validate the leave with second level (If Leave type need second validation)')
@@ -334,7 +338,8 @@ class HolidaysRequest(models.Model):
 
     @api.onchange('employee_id')
     def _onchange_employee_id(self):
-        self.manager_id = self.employee_id.parent_id.id
+        #self.manager_id = self.employee_id.parent_id.id
+        self.x_studio_employee_replacement = self.employee_id.x_studio_employee_replacement.id
         if self.employee_id:
             self.department_id = self.employee_id.department_id
 
@@ -585,7 +590,8 @@ class HolidaysRequest(models.Model):
             'date_to': self.date_to,
             'notes': self.notes,
             'number_of_days': self.number_of_days,
-            'parent_id': self.id,
+            #'parent_id': self.id,
+            'x_studio_employee_replacement': self.id,
             'employee_id': employee.id
         }
         return values
@@ -709,7 +715,8 @@ class HolidaysRequest(models.Model):
                 raise UserError(_('Only a Leave Manager can approve its own requests.'))
 
             if (state == 'validate1' and val_type == 'both') or (state == 'validate' and val_type == 'manager'):
-                manager = holiday.employee_id.parent_id or holiday.employee_id.department_id.manager_id
+                #manager = holiday.employee_id.parent_id or holiday.employee_id.department_id.manager_id
+                manager = holiday.employee_id.x_studio_employee_replacement or holiday.employee_id.department_id.x_studio_employee_replacement
                 if (manager and manager != current_employee) and not self.env.user.has_group('hr_holidays.group_hr_holidays_manager'):
                     raise UserError(_('You must be either %s\'s manager or Leave manager to approve this leave') % (holiday.employee_id.name))
 
@@ -722,12 +729,18 @@ class HolidaysRequest(models.Model):
     # ------------------------------------------------------------
 
     def _get_responsible_for_approval(self):
-        if self.state == 'confirm' and self.manager_id.user_id:
-            return self.manager_id.user_id
-        elif self.state == 'confirm' and self.employee_id.parent_id.user_id:
-            return self.employee_id.parent_id.user_id
-        elif self.department_id.manager_id.user_id:
-            return self.department_id.manager_id.user_id
+        #if self.state == 'confirm' and self.manager_id.user_id:
+            #return self.manager_id.user_id
+        if self.state == 'confirm' and self.x_studio_employee_replacement.user_id:
+            return self.x_studio_employee_replacement.user_id
+        #elif self.state == 'confirm' and self.employee_id.parent_id.user_id:
+            #return self.employee_id.parent_id.user_id
+        elif self.state == 'confirm' and self.employee_id.x_studio_employee_replacement.user_id:
+            return self.employee_id.x_studio_employee_replacement.user_id
+        #elif self.department_id.manager_id.user_id:
+            #return self.department_id.manager_id.user_id
+        elif self.department_id.x_studio_employee_replacement.user_id:
+            return self.department_id.x_studio_employee_replacement.user_id
         return self.env.user
 
     def activity_update(self):
