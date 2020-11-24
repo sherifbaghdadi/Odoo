@@ -190,10 +190,13 @@ class Employee(models.Model):
 
     def write(self, values):
         res = super(Employee, self).write(values)
-        if 'parent_id' in values or 'department_id' in values:
+        #if 'parent_id' in values or 'department_id' in values:
+        if 'x_studio_employee_replacement' in values or 'department_id' in values:
             hr_vals = {}
-            if values.get('parent_id') is not None:
-                hr_vals['manager_id'] = values['parent_id']
+            #if values.get('parent_id') is not None:
+            if values.get('x_studio_employee_replacement') is not None:
+                #hr_vals['manager_id'] = values['parent_id']
+                hr_vals['x_studio_employee_replacement'] = values['x_studio_employee_replacement']
             if values.get('department_id') is not None:
                 hr_vals['department_id'] = values['department_id']
             holidays = self.env['hr.leave'].search([('state', 'in', ['draft', 'confirm']), ('employee_id', 'in', self.ids)])
